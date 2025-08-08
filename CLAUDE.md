@@ -72,19 +72,121 @@ python -c "from app.database import init_db; init_db()"
 ```
 
 ### Testing
+
+The project includes a comprehensive test suite with 88%+ coverage across multiple categories.
+
+#### Test Categories
+
+1. **Unit Tests** (`test_crud.py`): Test CRUD operations in isolation
+2. **Integration Tests** (`test_auth.py`, `test_tasks.py`): Test complete API workflows
+3. **Security Tests** (`test_security.py`): Test authentication, authorization, and security
+4. **Performance Tests** (`test_performance.py`): Test response times and scalability
+
+#### Running Tests
+
 ```bash
-# Run all tests
+# Run all tests with coverage
 pytest
 
-# Run with coverage
-pytest --cov=app --cov-report=html
+# Run specific test categories
+pytest tests/test_crud.py -v        # Unit tests
+pytest tests/test_auth.py -v        # Authentication tests
+pytest tests/test_tasks.py -v       # Task API tests
+pytest tests/test_security.py -v    # Security tests
+pytest tests/test_performance.py -v # Performance tests
 
-# Run specific test file
-pytest tests/test_tasks.py -v
+# Run tests by markers
+pytest -m unit                      # Only unit tests
+pytest -m security                  # Only security tests
+pytest -m performance               # Only performance tests
+pytest -m "not slow"                # Skip slow tests
 
-# Run tests matching pattern
-pytest -k "test_create"
+# Coverage reporting
+pytest --cov=app --cov-report=html  # Generate HTML coverage report
+pytest --cov=app --cov-report=term-missing  # Terminal coverage report
+
+# Run specific test patterns
+pytest -k "test_create"             # Tests containing "create"
+pytest -k "auth and not security"   # Auth tests excluding security
+
+# Parallel testing (install pytest-xdist first)
+pytest -n auto                      # Run tests in parallel
+
+# Test with different output formats
+pytest --tb=short                   # Short traceback format
+pytest --tb=no                      # No traceback
+pytest -v                           # Verbose output
+pytest -q                           # Quiet output
 ```
+
+#### Test Database
+
+Tests use isolated SQLite databases to prevent interference:
+- Authentication tests: `test_auth.db`
+- Task tests: `test_tasks.db`
+- CRUD tests: `test_crud.db`
+- Security tests: `test_security.db`
+- Performance tests: `test_performance.db`
+
+Each test file automatically creates and destroys its database for isolation.
+
+#### Test Fixtures
+
+The test suite includes reusable fixtures:
+- `db_session`: Clean database session for each test
+- `sample_user`: Pre-created user for testing
+- `authenticated_user`: User with valid JWT token
+- `auth_headers`: Authorization headers for API calls
+- `test_user`: Complete user setup with token
+
+#### Performance Benchmarks
+
+Performance tests establish benchmarks for:
+- **Login**: < 1.0 second
+- **Registration**: < 2.0 seconds
+- **Token verification**: < 0.5 seconds
+- **Task creation**: < 0.5 seconds
+- **Bulk operations**: < 50ms average per task
+- **Search/filtering**: < 0.5 seconds
+- **Pagination**: < 0.5 seconds regardless of position
+
+#### Security Test Coverage
+
+Security tests verify:
+- Password hashing and complexity requirements
+- JWT token creation, verification, and expiration
+- Token tampering detection
+- Authentication requirement enforcement
+- User data isolation
+- SQL injection prevention
+- XSS handling
+- Input length validation
+- Brute force protection
+
+#### Continuous Integration
+
+For CI/CD pipelines, use:
+```bash
+# Fail if coverage drops below 85%
+pytest --cov=app --cov-fail-under=85
+
+# Generate JUnit XML for CI systems
+pytest --junit-xml=test-results.xml
+
+# Run with timeout to prevent hanging tests
+pytest --timeout=300
+```
+
+#### Adding New Tests
+
+When adding features, ensure you add tests to the appropriate category:
+
+1. **Unit tests**: Test individual functions/methods in isolation
+2. **Integration tests**: Test complete API workflows
+3. **Security tests**: Test security implications of new features
+4. **Performance tests**: Test performance impact
+
+Follow the existing patterns and use provided fixtures for consistency.
 
 ### Code Quality
 ```bash

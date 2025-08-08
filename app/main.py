@@ -1,8 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 from app.config import settings
 from app.database import engine, Base
 from app.api import auth, tasks
+from app.middleware.rate_limit import InMemoryRateLimiter
+from app.core.logging import setup_logging, get_logger
+
+# Set up logging
+setup_logging()
+logger = get_logger(__name__)
 
 Base.metadata.create_all(bind=engine)
 
@@ -63,9 +70,16 @@ A **modern**, **secure**, and **scalable** Task Management API built with FastAP
     ],
 )
 
+# Add rate limiting middleware (before CORS)
+if not settings.debug:  # Only enable in production
+    app.add_middleware(
+        InMemoryRateLimiter,
+        requests_per_minute=settings.rate_limit_requests
+    )
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=settings.get_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -73,6 +87,9 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(tasks.router, prefix="/api/v1")
+
+# Add Prometheus metrics
+Instrumentator().instrument(app).expose(app)
 
 
 @app.get("/", tags=["health"])
@@ -89,10 +106,64 @@ async def root():
 
 @app.get("/health", tags=["health"])
 async def health_check():
+    """
+    Comprehensive health check endpoint for monitoring systems.
+    
+    Returns:
+    - Service status and basic information
+    - Database connectivity status
+    - API version information
+    """
+    from app.database import engine
+    
+    # Check database connectivity
+    db_status = "healthy"
+    try:
+        from sqlalchemy import text
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except Exception as e:
+        db_status = f"unhealthy: {str(e)}"
+    
+    # Overall health status
+    overall_status = "healthy" if db_status == "healthy" else "unhealthy"
+    
     return {
-        "status": "healthy",
+        "status": overall_status,
         "service": settings.app_name,
         "version": settings.app_version,
-        "api_version": "v1"
+        "api_version": "v1",
+        "database": db_status,
+        "debug": settings.debug,
+        "features": {
+            "registration": settings.enable_registration,
+            "password_reset": settings.enable_password_reset
+        }
     }
+
+
+@app.get("/health/live", tags=["health"])
+async def liveness_check():
+    """
+    Kubernetes liveness probe endpoint.
+    Simple check to verify the application is running.
+    """
+    return {"status": "alive"}
+
+
+@app.get("/health/ready", tags=["health"])
+async def readiness_check():
+    """
+    Kubernetes readiness probe endpoint.
+    Checks if the application is ready to serve traffic.
+    """
+    from app.database import engine
+    
+    try:
+        from sqlalchemy import text
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        return {"status": "ready"}
+    except Exception as e:
+        return {"status": "not ready", "reason": str(e)}
 

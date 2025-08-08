@@ -1,0 +1,291 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+env:
+  PYTHON_VERSION: '3.12'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ==========================================
+  # Testing and Quality Checks
+  # ==========================================
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+    
+    - name: Set up test environment
+      env:
+        DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+        SECRET_KEY: test-secret-key-for-ci
+      run: |
+        # Run database migrations
+        alembic upgrade head
+    
+    - name: Run tests with coverage
+      env:
+        DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+        SECRET_KEY: test-secret-key-for-ci
+      run: |
+        pytest --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=85 -v
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  # ==========================================
+  # Code Quality and Security
+  # ==========================================
+  quality:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install black ruff mypy bandit safety
+    
+    - name: Format check with Black
+      run: black --check --diff app/ tests/
+    
+    - name: Lint with Ruff
+      run: ruff check app/ tests/
+    
+    - name: Type check with MyPy
+      run: mypy app/ --ignore-missing-imports
+    
+    - name: Security check with Bandit
+      run: bandit -r app/ -f json -o bandit-report.json
+      continue-on-error: true
+    
+    - name: Check dependencies with Safety
+      run: safety check --json --output safety-report.json
+      continue-on-error: true
+    
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          safety-report.json
+
+  # ==========================================
+  # Build Docker Image
+  # ==========================================
+  build:
+    runs-on: ubuntu-latest
+    needs: [test, quality]
+    if: github.event_name == 'push' || github.event_name == 'release'
+    
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        target: production
+
+  # ==========================================
+  # Deploy to Staging
+  # ==========================================
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    
+    steps:
+    - name: Deploy to staging server
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.STAGING_HOST }}
+        username: ${{ secrets.STAGING_USER }}
+        key: ${{ secrets.STAGING_SSH_KEY }}
+        script: |
+          cd /opt/task-api-staging
+          git pull origin develop
+          docker-compose -f docker-compose.staging.yml pull
+          docker-compose -f docker-compose.staging.yml up -d --remove-orphans
+          
+          # Wait for services to be healthy
+          sleep 30
+          
+          # Run health check
+          curl -f http://localhost/health || exit 1
+          
+          # Run database migrations
+          docker-compose -f docker-compose.staging.yml exec -T api alembic upgrade head
+
+  # ==========================================
+  # Deploy to Production
+  # ==========================================
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'release'
+    environment: production
+    
+    steps:
+    - name: Deploy to production server
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.PRODUCTION_HOST }}
+        username: ${{ secrets.PRODUCTION_USER }}
+        key: ${{ secrets.PRODUCTION_SSH_KEY }}
+        script: |
+          cd /opt/task-api-production
+          git pull origin main
+          
+          # Backup database before deployment
+          docker-compose -f docker-compose.prod.yml exec -T db pg_dump -U taskapi_user taskapi > backup-$(date +%Y%m%d-%H%M%S).sql
+          
+          # Deploy new version with zero-downtime
+          docker-compose -f docker-compose.prod.yml pull
+          docker-compose -f docker-compose.prod.yml up -d --remove-orphans
+          
+          # Wait for services to be healthy
+          sleep 60
+          
+          # Run health checks
+          curl -f https://api.yourdomain.com/health || exit 1
+          curl -f https://api.yourdomain.com/health/ready || exit 1
+          
+          # Run database migrations
+          docker-compose -f docker-compose.prod.yml exec -T api alembic upgrade head
+          
+          # Verify deployment
+          curl -f https://api.yourdomain.com/api/v1/ || exit 1
+
+    - name: Notify deployment success
+      uses: 8398a7/action-slack@v3
+      if: success()
+      with:
+        status: success
+        text: 'Production deployment successful! 🚀'
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    - name: Notify deployment failure
+      uses: 8398a7/action-slack@v3
+      if: failure()
+      with:
+        status: failure
+        text: 'Production deployment failed! 🚨'
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ==========================================
+  # Performance Testing
+  # ==========================================
+  performance-test:
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: github.ref == 'refs/heads/develop'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run performance tests
+      run: |
+        # Install Apache Bench for load testing
+        sudo apt-get update
+        sudo apt-get install -y apache2-utils
+        
+        # Basic load test (adjust URL to your staging environment)
+        ab -n 1000 -c 10 -H "Accept: application/json" ${{ secrets.STAGING_URL }}/health
+        
+        # API endpoint load test
+        ab -n 500 -c 5 -H "Accept: application/json" ${{ secrets.STAGING_URL }}/api/v1/
+
+    - name: Upload performance results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: performance-results
+        path: |
+          *.html
+          *.txt

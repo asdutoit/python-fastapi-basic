@@ -132,7 +132,7 @@ def test_login_wrong_password():
         }
     )
     assert response.status_code == 401
-    assert "Incorrect email or password" in response.json()["detail"]
+    assert "Incorrect username/email or password" in response.json()["detail"]
 
 
 def test_login_nonexistent_user():
@@ -144,7 +144,7 @@ def test_login_nonexistent_user():
         }
     )
     assert response.status_code == 401
-    assert "Incorrect email or password" in response.json()["detail"]
+    assert "Incorrect username/email or password" in response.json()["detail"]
 
 
 def test_get_current_user():

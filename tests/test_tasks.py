@@ -313,23 +313,25 @@ def test_user_isolation(test_user):
     task_id = response.json()["id"]
     
     # Create second user
-    client.post(
+    register_response = client.post(
         "/api/v1/auth/register",
         json={
             "email": "user2@example.com",
             "username": "user2",
-            "password": "pass123"
+            "password": "password123"
         }
     )
+    assert register_response.status_code == 201
     
     # Login as second user
     login_response = client.post(
         "/api/v1/auth/login",
         data={
             "username": "user2@example.com",
-            "password": "pass123"
+            "password": "password123"
         }
     )
+    assert login_response.status_code == 200
     token2 = login_response.json()["access_token"]
     headers2 = {"Authorization": f"Bearer {token2}"}
     
