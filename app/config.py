@@ -35,6 +35,18 @@ class Settings(BaseSettings):
     postgres_user: str = "taskapi_user"
     postgres_password: str = "secure_password_change_me"
     
+    # Apigee Integration Settings
+    apigee_enabled: bool = False
+    apigee_proxy_name: str = "task-management-api"
+    apigee_base_path: str = "/api/v1"
+    apigee_org: str = ""
+    apigee_env: str = "test"
+    target_backend_url: str = "https://your-backend-url.com"
+    
+    # API Gateway Headers
+    trust_proxy_headers: bool = False
+    forwarded_allow_ips: str = "*"
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

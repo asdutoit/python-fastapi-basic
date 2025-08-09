@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<MessageLogging name="Log-Request">
+    <DisplayName>Log Request</DisplayName>
+    <Syslog>
+        <Message>API Request: {client_ip} {request.verb} {request.uri} - User: {user_id} - Time: {system.timestamp}</Message>
+        <Host>logs.apigee.com</Host>
+        <Port>514</Port>
+        <FormatMessage>true</FormatMessage>
+        <DateFormat>yyyy-MM-dd HH:mm:ss</DateFormat>
+        <LogLevel>INFO</LogLevel>
+    </Syslog>
+    <File>
+        <Message>
+[{system.timestamp}] {client_ip} "{request.verb} {request.uri} {request.version}" {response.status.code} {response.content.length} "{request.header.referer}" "{request.header.user-agent}" user_id="{user_id}" request_id="{messageid}"
+        </Message>
+    </File>
+</MessageLogging>

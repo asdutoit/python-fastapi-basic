@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Quota name="Rate-Limiting">
+    <DisplayName>Rate Limiting</DisplayName>
+    <Properties/>
+    <Allow count="100" countRef="ratelimit.quota.count"/>
+    <Interval ref="ratelimit.quota.interval">1</Interval>
+    <Distributed>true</Distributed>
+    <Synchronous>true</Synchronous>
+    <TimeUnit ref="ratelimit.quota.timeunit">minute</TimeUnit>
+    <Identifier ref="ratelimit.quota.identifier">
+        <Ref>client_id</Ref>
+    </Identifier>
+    <MessageWeight ref="ratelimit.quota.weight"/>
+    <StartTime>2025-01-01 12:00:00</StartTime>
+</Quota>

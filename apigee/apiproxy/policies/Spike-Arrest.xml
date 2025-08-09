@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<SpikeArrest name="Spike-Arrest">
+    <DisplayName>Spike Arrest</DisplayName>
+    <Properties/>
+    <Rate>10ps</Rate>
+    <UseEffectiveCount>true</UseEffectiveCount>
+    <Identifier ref="spikearrest.identifier">
+        <Ref>client_id</Ref>
+    </Identifier>
+</SpikeArrest>

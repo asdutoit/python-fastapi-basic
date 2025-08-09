@@ -115,28 +115,33 @@ curl -k https://localhost/api/v1/auth/register \
 ### Services Included
 
 1. **FastAPI Application** (Port 8000)
+
    - Main API service
    - JWT authentication
    - Rate limiting
    - Health checks
 
 2. **PostgreSQL Database** (Port 5432)
+
    - Primary data storage
    - Persistent volumes
    - Health monitoring
 
 3. **Redis Cache** (Port 6379)
+
    - Session storage (future)
    - Rate limiting storage
    - Caching layer
 
 4. **Nginx Reverse Proxy** (Ports 80/443)
+
    - SSL termination
    - Load balancing
    - Rate limiting
    - Security headers
 
 5. **Prometheus** (Port 9090)
+
    - Metrics collection
    - API monitoring
    - Performance tracking
@@ -160,7 +165,7 @@ export GRAFANA_PASSWORD=$(openssl rand -base64 16)
 # Update .env with these values
 echo "SECRET_KEY=$SECRET_KEY" >> .env
 echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" >> .env
-echo "REDIS_PASSWORD=$REDIS_PASSWORD" >> .env  
+echo "REDIS_PASSWORD=$REDIS_PASSWORD" >> .env
 echo "GRAFANA_PASSWORD=$GRAFANA_PASSWORD" >> .env
 ```
 
@@ -257,12 +262,14 @@ Key metrics to monitor:
 ### Common Issues
 
 1. **SSL Certificate Errors**
+
    ```bash
    # Check certificate validity
    openssl x509 -in nginx/ssl/cert.pem -text -noout
    ```
 
 2. **Database Connection Issues**
+
    ```bash
    # Check database connectivity
    docker-compose -f docker-compose.prod.yml exec api python -c "from app.database import engine; engine.connect()"
@@ -277,10 +284,11 @@ Key metrics to monitor:
 ### Recovery Procedures
 
 1. **Service Recovery**
+
    ```bash
    # Restart all services
    docker-compose -f docker-compose.prod.yml restart
-   
+
    # Restart specific service
    docker-compose -f docker-compose.prod.yml restart api
    ```
@@ -309,16 +317,19 @@ Key metrics to monitor:
 ## Maintenance Tasks
 
 ### Daily
+
 - Monitor service health
 - Check error logs
 - Verify backup completion
 
-### Weekly  
+### Weekly
+
 - Review performance metrics
 - Update security patches
 - Test backup restoration
 
 ### Monthly
+
 - Security audit
 - Performance optimization
 - Dependency updates

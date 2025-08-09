@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<VerifyJWT name="JWT-Verify">
+    <DisplayName>JWT Verify</DisplayName>
+    <Algorithm>HS256</Algorithm>
+    <Source>request.header.authorization</Source>
+    <SecretKey>
+        <Value ref="jwt.secret.key"/>
+    </SecretKey>
+    <Subject ref="jwt.subject"/>
+    <Issuer ref="jwt.issuer"/>
+    <Audience ref="jwt.audience"/>
+    <TimeAllowance>60</TimeAllowance>
+    <AdditionalClaims>
+        <Claim name="user_id" ref="jwt.claim.user_id"/>
+        <Claim name="email" ref="jwt.claim.email"/>
+        <Claim name="username" ref="jwt.claim.username"/>
+    </AdditionalClaims>
+    <AdditionalHeaders>
+        <Header name="X-User-ID">
+            <Ref>jwt.claim.user_id</Ref>
+        </Header>
+        <Header name="X-User-Email">
+            <Ref>jwt.claim.email</Ref>
+        </Header>
+    </AdditionalHeaders>
+</VerifyJWT>

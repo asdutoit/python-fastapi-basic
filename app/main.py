@@ -6,12 +6,21 @@ from app.database import engine, Base
 from app.api import auth, tasks
 from app.middleware.rate_limit import InMemoryRateLimiter
 from app.core.logging import setup_logging, get_logger
+from app.core.tracing import setup_tracing, instrument_app, instrument_sqlalchemy
 
 # Set up logging
 setup_logging()
 logger = get_logger(__name__)
 
+# Set up tracing
+if not settings.debug:  # Only enable tracing in production
+    setup_tracing()
+
 Base.metadata.create_all(bind=engine)
+
+# Instrument SQLAlchemy for tracing
+if not settings.debug:
+    instrument_sqlalchemy(engine)
 
 app = FastAPI(
     title=settings.app_name,
@@ -90,6 +99,10 @@ app.include_router(tasks.router, prefix="/api/v1")
 
 # Add Prometheus metrics
 Instrumentator().instrument(app).expose(app)
+
+# Add tracing instrumentation
+if not settings.debug:
+    instrument_app(app)
 
 
 @app.get("/", tags=["health"])

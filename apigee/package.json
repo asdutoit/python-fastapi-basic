@@ -1,0 +1,31 @@
+{
+  "name": "task-management-api-apigee",
+  "version": "1.0.0",
+  "description": "Apigee integration for Task Management API",
+  "scripts": {
+    "deploy": "node deploy.js",
+    "deploy-test": "node deploy.js test",
+    "deploy-prod": "node deploy.js prod",
+    "undeploy": "node undeploy.js",
+    "test": "node test-proxy.js",
+    "validate": "node validate.js"
+  },
+  "dependencies": {
+    "apigeetool": "^0.16.3",
+    "axios": "^1.6.2",
+    "dotenv": "^16.3.1",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3"
+  },
+  "keywords": [
+    "apigee",
+    "fastapi",
+    "task-management",
+    "api-gateway"
+  ],
+  "author": "Task Management API Team",
+  "license": "MIT"
+}

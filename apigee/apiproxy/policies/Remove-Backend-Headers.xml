@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<AssignMessage name="Remove-Backend-Headers">
+    <DisplayName>Remove Backend Headers</DisplayName>
+    <AssignTo createNew="false" transport="http" type="response"/>
+    <Remove>
+        <Headers>
+            <Header name="Server"/>
+            <Header name="X-Powered-By"/>
+            <Header name="X-Runtime"/>
+            <Header name="X-Request-Id"/>
+            <Header name="X-Backend-Server"/>
+        </Headers>
+    </Remove>
+    <Set>
+        <Headers>
+            <Header name="X-API-Version">v1</Header>
+            <Header name="X-Powered-By">Apigee</Header>
+        </Headers>
+    </Set>
+</AssignMessage>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<APIProxy revision="1" name="task-management-api">
+    <ConfigurationVersion majorVersion="4" minorVersion="0"/>
+    <CreatedAt>2025-01-08T19:30:00.000Z</CreatedAt>
+    <CreatedBy>api-developer</CreatedBy>
+    <Description>Task Management API - FastAPI backend with JWT authentication</Description>
+    <DisplayName>Task Management API</DisplayName>
+    <LastModifiedAt>2025-01-08T19:30:00.000Z</LastModifiedAt>
+    <LastModifiedBy>api-developer</LastModifiedBy>
+    <Policies>
+        <Policy>CORS-Policy</Policy>
+        <Policy>API-Key-Verification</Policy>
+        <Policy>JWT-Verify</Policy>
+        <Policy>Rate-Limiting</Policy>
+        <Policy>Spike-Arrest</Policy>
+        <Policy>Extract-JWT-Claims</Policy>
+        <Policy>Add-CORS-Headers</Policy>
+        <Policy>Remove-Backend-Headers</Policy>
+        <Policy>Log-Request</Policy>
+        <Policy>Transform-Response</Policy>
+    </Policies>
+    <ProxyEndpoints>
+        <ProxyEndpoint>default</ProxyEndpoint>
+    </ProxyEndpoints>
+    <Resources>
+        <Resource>node://openapi-spec.json</Resource>
+    </Resources>
+    <TargetEndpoints>
+        <TargetEndpoint>task-api-backend</TargetEndpoint>
+    </TargetEndpoints>
+</APIProxy>

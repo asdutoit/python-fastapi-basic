@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ProxyEndpoint name="default">
+    <Description>Default proxy endpoint for Task Management API</Description>
+    <DefaultFaultRule name="default-fault-rule">
+        <Step>
+            <Name>Add-CORS-Headers</Name>
+        </Step>
+    </DefaultFaultRule>
+    <FaultRules/>
+    <Flows>
+        <!-- Public endpoints (no authentication required) -->
+        <Flow name="Health Check">
+            <Description>Health check endpoints</Description>
+            <Request>
+                <Step>
+                    <Name>Add-CORS-Headers</Name>
+                </Step>
+                <Step>
+                    <Name>Log-Request</Name>
+                </Step>
+            </Request>
+            <Response>
+                <Step>
+                    <Name>Remove-Backend-Headers</Name>
+                </Step>
+            </Response>
+            <Condition>(proxy.pathsuffix MatchesPath "/health*") or (proxy.pathsuffix = "/")</Condition>
+        </Flow>
+        
+        <!-- Authentication endpoints -->
+        <Flow name="Authentication">
+            <Description>User authentication endpoints</Description>
+            <Request>
+                <Step>
+                    <Name>Add-CORS-Headers</Name>
+                </Step>
+                <Step>
+                    <Name>Rate-Limiting</Name>
+                </Step>
+                <Step>
+                    <Name>Spike-Arrest</Name>
+                </Step>
+                <Step>
+                    <Name>Log-Request</Name>
+                </Step>
+            </Request>
+            <Response>
+                <Step>
+                    <Name>Remove-Backend-Headers</Name>
+                </Step>
+                <Step>
+                    <Name>Transform-Response</Name>
+                </Step>
+            </Response>
+            <Condition>(proxy.pathsuffix MatchesPath "/api/v1/auth/*")</Condition>
+        </Flow>
+        
+        <!-- Protected endpoints (authentication required) -->
+        <Flow name="Protected Resources">
+            <Description>Protected task management endpoints</Description>
+            <Request>
+                <Step>
+                    <Name>Add-CORS-Headers</Name>
+                </Step>
+                <Step>
+                    <Name>JWT-Verify</Name>
+                </Step>
+                <Step>
+                    <Name>Extract-JWT-Claims</Name>
+                </Step>
+                <Step>
+                    <Name>Rate-Limiting</Name>
+                </Step>
+                <Step>
+                    <Name>Spike-Arrest</Name>
+                </Step>
+                <Step>
+                    <Name>Log-Request</Name>
+                </Step>
+            </Request>
+            <Response>
+                <Step>
+                    <Name>Remove-Backend-Headers</Name>
+                </Step>
+                <Step>
+                    <Name>Transform-Response</Name>
+                </Step>
+            </Response>
+            <Condition>(proxy.pathsuffix MatchesPath "/api/v1/tasks*") or (proxy.pathsuffix MatchesPath "/api/v1/users*")</Condition>
+        </Flow>
+        
+        <!-- API Documentation -->
+        <Flow name="API Documentation">
+            <Description>OpenAPI documentation endpoints</Description>
+            <Request>
+                <Step>
+                    <Name>Add-CORS-Headers</Name>
+                </Step>
+                <Step>
+                    <Name>Log-Request</Name>
+                </Step>
+            </Request>
+            <Response>
+                <Step>
+                    <Name>Remove-Backend-Headers</Name>
+                </Step>
+            </Response>
+            <Condition>(proxy.pathsuffix MatchesPath "/docs*") or (proxy.pathsuffix MatchesPath "/redoc*") or (proxy.pathsuffix MatchesPath "/openapi.json")</Condition>
+        </Flow>
+        
+        <!-- CORS Preflight -->
+        <Flow name="CORS Preflight">
+            <Description>Handle CORS preflight requests</Description>
+            <Request>
+                <Step>
+                    <Name>Add-CORS-Headers</Name>
+                </Step>
+            </Request>
+            <Response/>
+            <Condition>request.verb = "OPTIONS"</Condition>
+        </Flow>
+    </Flows>
+    
+    <!-- Catch-all flow for unmatched requests -->
+    <PostFlow name="PostFlow">
+        <Request/>
+        <Response>
+            <Step>
+                <Name>Add-CORS-Headers</Name>
+            </Step>
+        </Response>
+    </PostFlow>
+    
+    <HTTPProxyConnection>
+        <BasePath>/task-api/v1</BasePath>
+        <Properties/>
+        <VirtualHost>default</VirtualHost>
+        <VirtualHost>secure</VirtualHost>
+    </HTTPProxyConnection>
+    
+    <RouteRule name="default">
+        <TargetEndpoint>task-api-backend</TargetEndpoint>
+    </RouteRule>
+</ProxyEndpoint>

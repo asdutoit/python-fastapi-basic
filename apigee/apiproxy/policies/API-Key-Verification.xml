@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<VerifyAPIKey name="API-Key-Verification">
+    <DisplayName>Verify API Key</DisplayName>
+    <Properties/>
+    <APIKey ref="request.queryparam.apikey"/>
+    <Variable>
+        <Name>client_id</Name>
+        <Ref>verifyapikey.API-Key-Verification.client_id</Ref>
+    </Variable>
+    <Variable>
+        <Name>client_secret</Name>
+        <Ref>verifyapikey.API-Key-Verification.client_secret</Ref>
+    </Variable>
+    <Variable>
+        <Name>redirection_uris</Name>
+        <Ref>verifyapikey.API-Key-Verification.redirection_uris</Ref>
+    </Variable>
+</VerifyAPIKey>

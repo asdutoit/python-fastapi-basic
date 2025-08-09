@@ -36,6 +36,23 @@ class JSONFormatter(logging.Formatter):
         
         if hasattr(record, "duration"):
             log_entry["duration"] = record.duration
+            
+        # Add HTTP request fields
+        if hasattr(record, "method"):
+            log_entry["method"] = record.method
+            
+        if hasattr(record, "url"):
+            log_entry["url"] = record.url
+            
+        if hasattr(record, "status_code"):
+            log_entry["status_code"] = record.status_code
+            
+        if hasattr(record, "ip_address"):
+            log_entry["ip_address"] = record.ip_address
+            
+        # Add service information
+        log_entry["service"] = "task-api"
+        log_entry["version"] = "1.0.0"
         
         # Add exception info if present
         if record.exc_info:

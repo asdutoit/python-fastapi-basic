@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ExtractVariables name="Extract-JWT-Claims">
+    <DisplayName>Extract JWT Claims</DisplayName>
+    <Source>jwt.decoded.payload</Source>
+    <JSONPayload>
+        <Variable name="user_id" type="string">
+            <JSONPath>$.sub</JSONPath>
+        </Variable>
+        <Variable name="email" type="string">
+            <JSONPath>$.email</JSONPath>
+        </Variable>
+        <Variable name="username" type="string">
+            <JSONPath>$.username</JSONPath>
+        </Variable>
+        <Variable name="exp" type="integer">
+            <JSONPath>$.exp</JSONPath>
+        </Variable>
+    </JSONPayload>
+</ExtractVariables>

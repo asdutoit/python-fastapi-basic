@@ -13,6 +13,7 @@ Track progress through the 10 development phases outlined in the project plan. E
 ## Common Development Commands
 
 ### Environment Setup
+
 ```bash
 # Create and activate virtual environment
 python -m venv venv
@@ -24,6 +25,7 @@ pip install -r requirements-dev.txt  # Development dependencies
 ```
 
 ### Running the Application
+
 ```bash
 # Development server with auto-reload
 uvicorn app.main:app --reload --port 8000
@@ -36,6 +38,7 @@ uvicorn app.main:app --reload --port 8000
 ### Database Operations
 
 #### Alembic Migrations
+
 ```bash
 # Check current migration status
 alembic current
@@ -63,6 +66,7 @@ alembic upgrade head --sql
 ```
 
 #### Manual Database Operations
+
 ```bash
 # Initialize database (SQLite for development)
 python -c "from app.database import init_db; init_db()"
@@ -122,6 +126,7 @@ pytest -q                           # Quiet output
 #### Test Database
 
 Tests use isolated SQLite databases to prevent interference:
+
 - Authentication tests: `test_auth.db`
 - Task tests: `test_tasks.db`
 - CRUD tests: `test_crud.db`
@@ -133,6 +138,7 @@ Each test file automatically creates and destroys its database for isolation.
 #### Test Fixtures
 
 The test suite includes reusable fixtures:
+
 - `db_session`: Clean database session for each test
 - `sample_user`: Pre-created user for testing
 - `authenticated_user`: User with valid JWT token
@@ -142,6 +148,7 @@ The test suite includes reusable fixtures:
 #### Performance Benchmarks
 
 Performance tests establish benchmarks for:
+
 - **Login**: < 1.0 second
 - **Registration**: < 2.0 seconds
 - **Token verification**: < 0.5 seconds
@@ -153,6 +160,7 @@ Performance tests establish benchmarks for:
 #### Security Test Coverage
 
 Security tests verify:
+
 - Password hashing and complexity requirements
 - JWT token creation, verification, and expiration
 - Token tampering detection
@@ -166,6 +174,7 @@ Security tests verify:
 #### Continuous Integration
 
 For CI/CD pipelines, use:
+
 ```bash
 # Fail if coverage drops below 85%
 pytest --cov=app --cov-fail-under=85
@@ -189,6 +198,7 @@ When adding features, ensure you add tests to the appropriate category:
 Follow the existing patterns and use provided fixtures for consistency.
 
 ### Code Quality
+
 ```bash
 # Format code with black
 black app/ tests/
@@ -204,6 +214,7 @@ black . && ruff check . && mypy app/
 ```
 
 ### Docker Operations
+
 ```bash
 # Build and run with docker-compose
 docker-compose up --build
@@ -218,6 +229,7 @@ docker-compose logs -f
 ## Project Architecture
 
 ### Directory Structure
+
 ```
 task-api/
 ├── app/
@@ -254,6 +266,7 @@ task-api/
 ## Database Schema
 
 ### User Model
+
 - id: UUID primary key
 - email: Unique, indexed
 - username: Unique
@@ -262,6 +275,7 @@ task-api/
 - created_at: Timestamp
 
 ### Task Model
+
 - id: UUID primary key
 - title: String, required
 - description: Text, optional
@@ -273,16 +287,19 @@ task-api/
 ## API Endpoints
 
 ### Authentication
+
 - `POST /auth/register` - User registration
 - `POST /auth/login` - Login with email/password
 - `GET /auth/me` - Get current user (protected)
 
 ### Users
+
 - `GET /users/me` - Get current user profile
 - `PUT /users/me` - Update current user
 - `GET /users/{user_id}` - Get user by ID (admin only)
 
 ### Tasks
+
 - `GET /tasks` - List user's tasks (paginated)
 - `POST /tasks` - Create new task
 - `GET /tasks/{task_id}` - Get specific task
@@ -292,6 +309,7 @@ task-api/
 ## Development Guidelines
 
 ### When Adding New Features
+
 1. Create SQLAlchemy model in `app/models/`
 2. Create Pydantic schemas in `app/schemas/`
 3. Implement CRUD operations in `app/crud/`
@@ -299,12 +317,14 @@ task-api/
 5. Write tests in `tests/`
 
 ### Testing Strategy
+
 - Use pytest fixtures for database and client setup
 - Test both success and error cases
 - Mock external dependencies
 - Use test database separate from development
 
 ### Security Considerations
+
 - Never store plain text passwords
 - Use environment variables for secrets
 - Implement proper CORS for production
@@ -312,6 +332,7 @@ task-api/
 - Validate all inputs with Pydantic
 
 ### Apigee Integration Preparation
+
 - Ensure all endpoints return consistent JSON responses
 - Implement proper HTTP status codes
 - Add OpenAPI documentation tags
@@ -321,6 +342,7 @@ task-api/
 ## Environment Variables
 
 Create `.env` file for local development:
+
 ```
 DATABASE_URL=sqlite:///./task_api.db
 SECRET_KEY=your-secret-key-here
@@ -329,6 +351,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
 For production, use PostgreSQL:
+
 ```
 DATABASE_URL=postgresql://user:password@localhost/dbname
 ```
@@ -340,11 +363,56 @@ DATABASE_URL=postgresql://user:password@localhost/dbname
 3. **Authentication Failures**: Check JWT secret key and token expiration settings
 4. **CORS Issues**: Configure CORS middleware in main.py for frontend integration
 
+## Google Apigee Integration
+
+The API is fully integrated with Google Apigee for enterprise API management. See `APIGEE_INTEGRATION_GUIDE.md` for detailed setup instructions.
+
+### Quick Apigee Deployment
+
+1. **Configure Environment**
+
+   ```bash
+   cd apigee/
+   cp .env.template .env
+   # Edit .env with your Apigee credentials and backend URL
+   ```
+
+2. **Deploy to Apigee**
+
+   ```bash
+   ./deploy.sh test your-apigee-org
+   ```
+
+3. **Test Integration**
+   ```bash
+   export API_KEY=your-generated-api-key
+   node test-proxy.js
+   ```
+
+### Apigee Features Included
+
+- **JWT Authentication** - Seamless token verification
+- **API Key Management** - Rate limiting and analytics per key
+- **CORS Handling** - Browser-compatible cross-origin requests
+- **Rate Limiting** - 100 requests/minute with spike arrest protection
+- **Request/Response Transformation** - Header management and cleanup
+- **Health Monitoring** - Backend health checks and failover
+- **Analytics Integration** - Request tracking and performance monitoring
+
+### Apigee Proxy Endpoints
+
+- **Health**: `https://your-org-env.apigee.net/task-api/v1/health`
+- **Authentication**: `https://your-org-env.apigee.net/task-api/v1/api/v1/auth/*`
+- **Tasks**: `https://your-org-env.apigee.net/task-api/v1/api/v1/tasks/*`
+- **Documentation**: `https://your-org-env.apigee.net/task-api/v1/docs`
+
 ## Phase Completion Checklist
 
 When completing each development phase:
+
 1. All code follows the established patterns
 2. Tests are written and passing
 3. Documentation is updated
 4. Code is formatted and linted
 5. Functionality is manually tested via Swagger UI
+6. **Apigee integration tested** (if deploying to production)

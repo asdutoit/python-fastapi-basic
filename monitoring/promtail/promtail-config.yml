@@ -1,0 +1,94 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Scrape Docker container logs
+  - job_name: containers
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: containerlogs
+          __path__: /var/lib/docker/containers/*/*log
+
+    pipeline_stages:
+      # Parse Docker JSON logs
+      - json:
+          expressions:
+            output: log
+            stream: stream
+            attrs:
+      
+      # Extract container name from file path
+      - regex:
+          expression: '^/var/lib/docker/containers/(?P<container_id>[^/]+)/.*\.log$'
+          source: filename
+      
+      # Add container name label
+      - docker: {}
+      
+      # Parse our structured JSON logs
+      - match:
+          selector: '{job="containerlogs"} |~ "taskapi-app"'
+          stages:
+            - json:
+                expressions:
+                  level: level
+                  message: message
+                  timestamp: timestamp
+                  logger: logger
+                  module: module
+                  function: function
+                  line: line
+                  user_id: user_id
+                  request_id: request_id
+                  duration: duration
+                  status_code: status_code
+                  method: method
+                  url: url
+                  
+            # Convert log level to standardized format
+            - template:
+                source: level
+                template: '{{ ToUpper .Value }}'
+            
+            # Set timestamp if available
+            - timestamp:
+                source: timestamp
+                format: '2006-01-02T15:04:05.000000Z'
+                fallback_formats:
+                  - '2006-01-02T15:04:05Z'
+                  - 'Jan _2 15:04:05'
+
+            # Add structured labels
+            - labels:
+                level:
+                logger:
+                module:
+                method:
+                user_id:
+
+  # Scrape system logs (optional)
+  - job_name: syslog
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: syslog
+          __path__: /var/log/syslog
+
+  # Scrape application-specific logs if mounted
+  - job_name: application
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: application
+          __path__: /var/log/app/*.log

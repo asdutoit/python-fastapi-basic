@@ -1,0 +1,388 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "Task Management API",
+    "description": "A modern, secure, and scalable Task Management API built with FastAPI for Google Apigee integration.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "API Support",
+      "email": "support@taskapi.com"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://your-org-test.apigee.net/task-api/v1",
+      "description": "Apigee Test Environment"
+    },
+    {
+      "url": "https://your-org-prod.apigee.net/task-api/v1",
+      "description": "Apigee Production Environment"
+    }
+  ],
+  "x-google-management": {
+    "metrics": [
+      {
+        "name": "request_count",
+        "displayName": "Request Count",
+        "valueType": "INT64",
+        "metricKind": "DELTA"
+      }
+    ],
+    "quota": {
+      "limits": [
+        {
+          "name": "requests_per_minute",
+          "displayName": "Requests per minute",
+          "defaultLimit": 100,
+          "maxLimit": 1000,
+          "duration": "1m"
+        }
+      ]
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["health"],
+        "summary": "Health Check",
+        "description": "Comprehensive health check endpoint for monitoring systems",
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {"type": "string"},
+                    "service": {"type": "string"},
+                    "version": {"type": "string"},
+                    "database": {"type": "string"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"ApiKeyAuth": []}]
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": ["authentication"],
+        "summary": "Register User",
+        "description": "Register a new user account",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {"type": "string", "format": "email"},
+                  "username": {"type": "string"},
+                  "password": {"type": "string", "minLength": 8}
+                },
+                "required": ["email", "username", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {"type": "string"},
+                    "email": {"type": "string"},
+                    "username": {"type": "string"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"ApiKeyAuth": []}]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": ["authentication"],
+        "summary": "Login User",
+        "description": "Authenticate user and return JWT token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {"type": "string"},
+                  "password": {"type": "string"}
+                },
+                "required": ["username", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "access_token": {"type": "string"},
+                    "token_type": {"type": "string", "example": "bearer"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"ApiKeyAuth": []}]
+      }
+    },
+    "/api/v1/tasks": {
+      "get": {
+        "tags": ["tasks"],
+        "summary": "List Tasks",
+        "description": "Get a paginated list of user tasks with optional filtering",
+        "parameters": [
+          {
+            "name": "completed",
+            "in": "query",
+            "schema": {"type": "boolean"},
+            "description": "Filter by completion status"
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "schema": {"type": "integer", "default": 0},
+            "description": "Number of items to skip"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {"type": "integer", "default": 10},
+            "description": "Maximum number of items to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of tasks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Task"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {"BearerAuth": []},
+          {"ApiKeyAuth": []}
+        ]
+      },
+      "post": {
+        "tags": ["tasks"],
+        "summary": "Create Task",
+        "description": "Create a new task",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Task created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {"BearerAuth": []},
+          {"ApiKeyAuth": []}
+        ]
+      }
+    },
+    "/api/v1/tasks/{task_id}": {
+      "get": {
+        "tags": ["tasks"],
+        "summary": "Get Task",
+        "description": "Get a specific task by ID",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"},
+            "description": "Task ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Task details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {"BearerAuth": []},
+          {"ApiKeyAuth": []}
+        ]
+      },
+      "put": {
+        "tags": ["tasks"],
+        "summary": "Update Task",
+        "description": "Update an existing task",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"},
+            "description": "Task ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Task updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {"BearerAuth": []},
+          {"ApiKeyAuth": []}
+        ]
+      },
+      "delete": {
+        "tags": ["tasks"],
+        "summary": "Delete Task",
+        "description": "Delete a task by ID",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"},
+            "description": "Task ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Task deleted successfully"
+          }
+        },
+        "security": [
+          {"BearerAuth": []},
+          {"ApiKeyAuth": []}
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Task": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "title": {"type": "string"},
+          "description": {"type": "string"},
+          "completed": {"type": "boolean"},
+          "created_at": {"type": "string", "format": "date-time"},
+          "updated_at": {"type": "string", "format": "date-time"},
+          "user_id": {"type": "string"}
+        }
+      },
+      "TaskCreate": {
+        "type": "object",
+        "properties": {
+          "title": {"type": "string"},
+          "description": {"type": "string"},
+          "completed": {"type": "boolean", "default": false}
+        },
+        "required": ["title"]
+      },
+      "TaskUpdate": {
+        "type": "object",
+        "properties": {
+          "title": {"type": "string"},
+          "description": {"type": "string"},
+          "completed": {"type": "boolean"}
+        }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token obtained from login endpoint"
+      },
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "query",
+        "name": "apikey",
+        "description": "Apigee API Key for authentication"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "authentication",
+      "description": "User authentication and authorization operations"
+    },
+    {
+      "name": "tasks",
+      "description": "Task management operations. All endpoints require authentication."
+    },
+    {
+      "name": "health",
+      "description": "Health check endpoints for monitoring"
+    }
+  ]
+}
